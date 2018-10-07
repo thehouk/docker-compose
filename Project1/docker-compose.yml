@@ -1,0 +1,251 @@
+---
+version: "2.2"
+services:
+  request-manager:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      args:
+        SSH_PRIVATE_KEY: "$SSH_PRIVATE_KEY"
+
+  request-manager-api:
+    image: docker_request-manager
+    restart: always
+    container_name: "request-manager-api"
+    command: npm start --prefix packages/request-manager-api
+    hostname: "request-manager-api"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    ports:
+      - "3009:3009"
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  request-handler:
+    image: docker_request-manager
+    restart: always
+    container_name: "request-handler"
+    command: npm start --prefix packages/request-handler
+    hostname: "request-handler"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  request-reader:
+    image: docker_request-manager
+    restart: always
+    container_name: "request-reader"
+    command: npm start --prefix packages/request-reader
+    hostname: "request-reader"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  gas-calculator:
+    image: docker_request-manager
+    restart: always
+    container_name: "gas-calculator"
+    command: npm start --prefix packages/gas-calculator
+    hostname: "gas-calculator"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  external-transactions-handler:
+    image: docker_request-manager
+    restart: always
+    container_name: "external-transactions-handler"
+    command: npm start --prefix packages/external-transactions-handler
+    hostname: "external-transactions-handler"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  transactions-signer:
+    image: docker_request-manager
+    restart: always
+    container_name: "transactions-signer"
+    command: npm start --prefix packages/transactions-signer
+    hostname: "transactions-signer"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    ports:
+      - "3011:3011"
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  transactions-monitor:
+    image: docker_request-manager
+    restart: always
+    container_name: "transactions-monitor"
+    command: npm start --prefix packages/transactions-monitor
+    hostname: "transactions-monitor"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+      - transactions-signer
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  transactions-writer:
+    image: docker_request-manager
+    restart: always
+    container_name: "transactions-writer"
+    command: npm start --prefix packages/transactions-writer
+    hostname: "transactions-writer"
+    depends_on:
+      - request-database
+      - rabbitmq
+      - dev-blockchain
+      - transactions-signer
+    links:
+      - request-database:request-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-request-manager
+
+  request-database:
+    build:
+      context: ../
+      dockerfile: docker/db.Dockerfile
+    restart: always
+    container_name: "request-database"
+    hostname: "request-database"
+    cpu_shares: 512
+    mem_limit: 512M
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_USER: postgres
+      POSTGRES_DB: testbcrm
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - "/srv/request-postgres/:/var/lib/postgresql/data/pgdata:consistent"
+
+  rabbitmq:
+   build:
+     context: ../
+     dockerfile: docker/rabbitmq.Dockerfile
+   container_name: test-rabbitmq
+   hostname: test-rabbitmq
+   environment:
+     RABBITMQ_DEFAULT_USER: devadmin
+     RABBITMQ_DEFAULT_PASS: devadmin
+     RABBITMQ_DEFAULT_VHOST: test-rabbitmq
+   ports:
+     - "15672:15672"
+     - "61613:61613"
+   volumes:
+     - /srv/rabbitmq:/var/lib/rabbitmq/mnesia/rabbit@test-rabbitmq
+
+
+  dev-blockchain:
+    image: arielstox/stox-dev-blockchain:1.0.0
+    container_name: dev-blockchain
+    ports:
+     - "8545:8545"
+    volumes:
+     - "/srv/bc-node/:/src/data:consistent"

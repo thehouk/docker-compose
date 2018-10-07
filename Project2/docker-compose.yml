@@ -1,0 +1,204 @@
+---
+version: "2.2"
+services:
+  wallets-manager:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      args:
+        SSH_PRIVATE_KEY: "$SSH_PRIVATE_KEY"
+  wallets-api:
+    image: docker_wallets-manager
+    restart: always
+    container_name: "wallets-api"
+    command: npm start --prefix packages/wallets-api
+    hostname: "wallets-api"
+    depends_on:
+      - wallets-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - wallets-database:wallets-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    ports:
+      - "3001:3001"
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-wallets
+
+  wallets-issuance-monitor:
+    image: docker_wallets-manager
+    restart: always
+    container_name: "wallets-issuance-monitor"
+    command: npm start --prefix packages/wallets-issuance-monitor
+    hostname: "wallets-issuance-monitor"
+    depends_on:
+      - wallets-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - wallets-database:wallets-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-wallets
+
+  wallets-issuing:
+    image: docker_wallets-manager
+    restart: always
+    container_name: "wallets-issuing"
+    command: npm start --prefix packages/wallets-issuing
+    hostname: "wallets-issuing"
+    depends_on:
+      - wallets-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - wallets-database:wallets-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-wallets
+
+  wallets-set-withdrawal-monitor:
+    image: docker_wallets-manager
+    restart: always
+    container_name: "wallets-set-withdrawal-monitor"
+    command: npm start --prefix packages/wallets-set-withdrawal-monitor
+    hostname: "wallets-set-withdrawal-monitor"
+    depends_on:
+      - wallets-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - wallets-database:wallets-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-wallets
+
+  wallets-sync:
+    image: docker_wallets-manager
+    restart: always
+    container_name: "wallets-sync"
+    command: npm run start --prefix packages/wallets-sync
+    hostname: "wallets-sync"
+    depends_on:
+      - wallets-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - wallets-database:wallets-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-wallets
+
+  user-withdraw-requested:
+    image: docker_wallets-manager
+    restart: always
+    container_name: "user-withdraw-requested"
+    command: npm start --prefix packages/user-withdraw-requested
+    hostname: "user-withdraw-requested"
+    depends_on:
+      - wallets-database
+      - rabbitmq
+      - dev-blockchain
+    links:
+      - wallets-database:wallets-database
+      - rabbitmq:test-rabbitmq
+      - dev-blockchain:dev-blockchain
+    cpu_shares: 512
+    mem_limit: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    volumes:
+      - ../:/test-bc-wallets
+
+  wallets-database:
+    build:
+      context: ../
+      dockerfile: docker/db.Dockerfile
+    restart: always
+    container_name: "wallets-database"
+    hostname: "wallets-database"
+    cpu_shares: 512
+    mem_limit: 512M
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_USER: postgres
+      POSTGRES_DB: testbc
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - "/srv/wallets-postgres/:/var/lib/postgresql/data/pgdata:consistent"
+
+  rabbitmq:
+   build:
+     context: ../
+     dockerfile: docker/rabbitmq.Dockerfile
+   container_name: test-rabbitmq
+   hostname: test-rabbitmq
+   environment:
+     RABBITMQ_DEFAULT_USER: devadmin
+     RABBITMQ_DEFAULT_PASS: devadmin
+     RABBITMQ_DEFAULT_VHOST: test-rabbitmq
+   ports:
+     - "15672:15672"
+     - "61613:61613"
+   volumes:
+     - /srv/rabbitmq:/var/lib/rabbitmq/mnesia/rabbit@test-rabbitmq
+
+  # rabbitmq:
+  #   image: rmohr/activemq:5.14.5
+  #   container_name: test-rabbitmq
+  #   ports:
+  #     - 61613:61613
+  #     - 8161:8161
+
+  dev-blockchain:
+    image: arielstox/stox-dev-blockchain:1.0.0
+    container_name: dev-blockchain
+    ports:
+     - "8545:8545"
+    volumes:
+     - "/srv/bc-node/:/src/data:consistent"
